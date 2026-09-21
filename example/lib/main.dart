@@ -24,6 +24,7 @@ class _HarnessState extends State<Harness> {
   bool _ready = false;
   bool _live = false;
   bool _break = false;
+  int _previewGen = 0;
   int _anchorIndex = 1; // 0 is custom; start at topLeft
   int _home = 0;
   int _away = 0;
@@ -32,10 +33,6 @@ class _HarnessState extends State<Harness> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
     _init();
   }
 
@@ -53,8 +50,9 @@ class _HarnessState extends State<Harness> {
       });
     });
     try {
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
       await _plugin.initPreview();
-      await _pushScore();
+      // No overlay and no delay on purpose: the preview must appear either way.
       setState(() => _ready = true);
     } on PlatformException catch (e) {
       setState(() => _log = '${e.code}: ${e.message}');
@@ -143,7 +141,7 @@ class _HarnessState extends State<Harness> {
       body: Row(
         children: [
           Expanded(
-            child: _ready ? const RtmpScoreboardPreview() : Center(child: Text(_log, style: const TextStyle(color: Colors.white))),
+            child: _ready ? Stack(clipBehavior: Clip.hardEdge, children: [Positioned.fill(child: RtmpScoreboardPreview(key: ValueKey(_previewGen)))]) : Center(child: Text(_log, style: const TextStyle(color: Colors.white))),
           ),
           SizedBox(
             width: 280,
@@ -163,6 +161,7 @@ class _HarnessState extends State<Harness> {
                     const SizedBox(height: 8),
                     OutlinedButton(onPressed: _ready ? () => _score(true) : null, child: const Text('Home +1')),
                     OutlinedButton(onPressed: _ready ? () => _score(false) : null, child: const Text('Away +1')),
+                    OutlinedButton(onPressed: _ready ? () => setState(() => _previewGen++) : null, child: const Text('Recreate preview')),
                     OutlinedButton(onPressed: _ready ? _toggleBreak : null, child: Text(_break ? 'Hide break card' : 'Show break card')),
                     OutlinedButton(onPressed: _ready ? _moveBadge : null, child: Text('Move badge: ${OverlayAnchor.values[_anchorIndex].name}')),
                     OutlinedButton(onPressed: _ready ? _plugin.switchCamera : null, child: const Text('Flip camera')),

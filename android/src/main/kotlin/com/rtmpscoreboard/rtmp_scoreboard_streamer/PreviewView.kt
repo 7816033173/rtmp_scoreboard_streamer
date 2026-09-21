@@ -24,10 +24,12 @@ class PreviewView(
         manager()?.bindPreview(textureView)
     }
 
-    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+        manager()?.previewResized(textureView, width, height)
+    }
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-        manager()?.unbindPreview()
+        manager()?.unbindPreview(textureView)
         return true
     }
 
@@ -36,6 +38,6 @@ class PreviewView(
     override fun getView(): View = textureView
 
     override fun dispose() {
-        manager()?.unbindPreview()
+        manager()?.unbindPreview(textureView)
     }
 }

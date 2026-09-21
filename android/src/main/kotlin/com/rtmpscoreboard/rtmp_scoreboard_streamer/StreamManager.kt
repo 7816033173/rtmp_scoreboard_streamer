@@ -29,6 +29,7 @@ class StreamManager(private val context: Context) : ConnectChecker {
     private val stream: GenericStream by lazy { GenericStream(context, this) }
 
     private var prepared = false
+    private var previewView: TextureView? = null
     private var encW = 1280
     private var encH = 720
 
@@ -108,6 +109,21 @@ class StreamManager(private val context: Context) : ConnectChecker {
     }
 
     fun bindPreview(view: TextureView) {
+        previewView = view
+        if (prepared) attachPreview(view)
+    }
+
+    /**
+     * The preview view changed size (for example the screen rotated after it was created).
+     * RootEncoder keeps drawing into the size it was started with, which shows as a black preview,
+     * so the new size has to be passed on.
+     */
+    fun previewResized(view: TextureView, width: Int, height: Int) {
+        if (previewView !== view || width <= 0 || height <= 0) return
+        stream.getGlInterface().setPreviewResolution(width, height)
+    }
+
+    private fun attachPreview(view: TextureView) {
         if (!prepared) return
         try {
             if (stream.isOnPreview) stream.stopPreview()
@@ -120,7 +136,10 @@ class StreamManager(private val context: Context) : ConnectChecker {
         }
     }
 
-    fun unbindPreview() {
+    /** Ignores stale views: a disposed old view must not stop the preview of a newer one. */
+    fun unbindPreview(view: TextureView) {
+        if (previewView !== view) return
+        previewView = null
         try {
             if (stream.isOnPreview) stream.stopPreview()
         } catch (t: Throwable) {
@@ -226,6 +245,7 @@ class StreamManager(private val context: Context) : ConnectChecker {
         runCatching { if (stream.isOnPreview) stream.stopPreview() }
         runCatching { stream.release() }
         layers.clear()
+        previewView = null
         prepared = false
     }
 
