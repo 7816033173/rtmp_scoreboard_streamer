@@ -51,7 +51,7 @@ class _HarnessState extends State<Harness> {
     });
     try {
       await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
-      await _plugin.initPreview();
+      await _plugin.initPreview(fillPreview: true);
       // No overlay and no delay on purpose: the preview must appear either way.
       setState(() => _ready = true);
     } on PlatformException catch (e) {

@@ -63,7 +63,8 @@ public class RtmpScoreboardStreamerPlugin: NSObject, FlutterPlugin, FlutterStrea
             height: args["height"] as? Int ?? 720,
             fps: args["fps"] as? Int ?? 30,
             bitrate: args["bitrate"] as? Int ?? 2_500_000,
-            front: args["front"] as? Bool ?? false
+            front: args["front"] as? Bool ?? false,
+            fill: args["fill"] as? Bool ?? false
           )
           result(nil)
         case "startStream":
@@ -204,6 +205,7 @@ actor StreamController {
   private var front = false
   private var size = CGSize(width: 1280, height: 720)
   private var bitrate = 2_500_000
+  private var fillPreview = false
 
   private func emit(_ event: [String: Any]) {
     onEvent?(event)
@@ -213,6 +215,8 @@ actor StreamController {
 
   func attachPreview(_ view: MTHKView) async {
     previews[ObjectIdentifier(view)] = view
+    let fill = fillPreview
+    await MainActor.run { view.videoGravity = fill ? .resizeAspectFill : .resizeAspect }
     await mixer.addOutput(view)
     emit(["type": "previewBound"])
   }
@@ -225,8 +229,9 @@ actor StreamController {
 
   // MARK: Prepare
 
-  func prepare(width: Int, height: Int, fps: Int, bitrate: Int, front: Bool) async throws {
+  func prepare(width: Int, height: Int, fps: Int, bitrate: Int, front: Bool, fill: Bool) async throws {
     size = CGSize(width: width, height: height)
+    fillPreview = fill
     self.bitrate = bitrate
     self.front = front
 

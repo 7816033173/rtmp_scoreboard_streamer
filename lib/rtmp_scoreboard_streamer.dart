@@ -56,12 +56,16 @@ class RtmpScoreboardStreamer {
       .map((e) => RtmpEvent.fromMap(e as Map<dynamic, dynamic>));
 
   /// Prepares the encoder and camera. Show [RtmpScoreboardPreview] afterwards to bind the preview.
+  ///
+  /// [fillPreview] crops the on-screen preview to fill its whole area instead of leaving bars
+  /// around a 16:9 picture. It changes only what is shown on screen, not the video that is sent.
   Future<void> initPreview({
     int width = 1280,
     int height = 720,
     int fps = 30,
     int bitrate = 2500000,
     bool front = false,
+    bool fillPreview = false,
   }) =>
       _methods.invokeMethod('initPreview', {
         'width': width,
@@ -69,6 +73,7 @@ class RtmpScoreboardStreamer {
         'fps': fps,
         'bitrate': bitrate,
         'front': front,
+        'fill': fillPreview,
       });
 
   /// [url] is the full RTMP endpoint including the stream key, e.g. `rtmp://a.rtmp.youtube.com/live2/KEY`.

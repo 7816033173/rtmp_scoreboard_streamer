@@ -61,6 +61,7 @@ class RtmpScoreboardStreamerPlugin : FlutterPlugin, MethodCallHandler {
                         call.argument<Int>("fps") ?: 30,
                         call.argument<Int>("bitrate") ?: 2_500_000,
                         call.argument<Boolean>("front") ?: false,
+                        call.argument<Boolean>("fill") ?: false,
                     )
                     result.success(null)
                 }

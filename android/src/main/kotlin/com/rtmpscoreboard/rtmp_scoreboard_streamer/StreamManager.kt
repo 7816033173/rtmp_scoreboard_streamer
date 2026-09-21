@@ -11,6 +11,7 @@ import com.pedro.encoder.input.gl.render.filters.`object`.ImageObjectFilterRende
 import com.pedro.encoder.input.sources.audio.MicrophoneSource
 import com.pedro.encoder.input.sources.video.Camera2Source
 import com.pedro.encoder.input.video.CameraHelper
+import com.pedro.encoder.utils.gl.AspectRatioMode
 import com.pedro.library.generic.GenericStream
 import io.flutter.plugin.common.EventChannel
 
@@ -69,9 +70,14 @@ class StreamManager(private val context: Context) : ConnectChecker {
     private fun emitError(code: String, message: String?) =
         emit(mapOf("type" to "error", "code" to code, "message" to (message ?: code)))
 
-    fun prepare(width: Int, height: Int, fps: Int, bitrate: Int, front: Boolean) {
+    /**
+     * [fill] only changes the on-screen preview: true crops the camera image to fill the whole preview
+     * view, false letterboxes it. The video that is sent is always the full frame.
+     */
+    fun prepare(width: Int, height: Int, fps: Int, bitrate: Int, front: Boolean, fill: Boolean = false) {
         encW = width
         encH = height
+        stream.getGlInterface().setAspectRatioMode(if (fill) AspectRatioMode.Fill else AspectRatioMode.Adjust)
         if (prepared) {
             // prepareVideo throws while previewing; only re-select the camera.
             selectCamera(front)
