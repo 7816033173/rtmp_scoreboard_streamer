@@ -401,12 +401,14 @@ final class OverlayLayers {
     }
 
     // Width is percent of the frame width; height follows the image aspect ratio.
-    let width = frame.width * CGFloat(widthPct / 100)
-    let height = width * CGFloat(image.height) / CGFloat(image.width)
+    let width = max(1, Int((frame.width * CGFloat(widthPct / 100)).rounded()))
+    let height = max(1, Int((CGFloat(width) * CGFloat(image.height) / CGFloat(image.width)).rounded()))
     let marginX = frame.width * CGFloat(x / 100)
     let marginY = frame.height * CGFloat(y / 100)
 
-    object.cgImage = image
+    // HaishinKit draws cgImage at its native pixel size and only uses `size` as clip bounds,
+    // so the PNG (captured at 2x) must be resampled to the target size first.
+    object.cgImage = Self.resample(image, width: width, height: height) ?? image
     object.size = CGSize(width: width, height: height)
     object.horizontalAlignment = Self.horizontal(anchor)
     object.verticalAlignment = Self.vertical(anchor)
@@ -424,6 +426,22 @@ final class OverlayLayers {
     let screen = await mixer.screen
     for object in objects.values { screen.removeChild(object) }
     objects.removeAll()
+  }
+
+  private static func resample(_ image: CGImage, width: Int, height: Int) -> CGImage? {
+    if image.width == width && image.height == height { return image }
+    guard let context = CGContext(
+      data: nil,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: 0,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+    ) else { return nil }
+    context.interpolationQuality = .high
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    return context.makeImage()
   }
 
   // "custom" places the top-left corner at (x, y): left/top alignment with those margins.
