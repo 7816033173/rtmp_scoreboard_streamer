@@ -195,7 +195,9 @@ actor StreamController {
   nonisolated(unsafe) var onEvent: (([String: Any]) -> Void)?
 
   private let mixer = MediaMixer(multiCamSessionEnabled: false, multiTrackAudioMixingEnabled: false)
-  private let layers = OverlayLayers()
+  // OverlayLayers is isolated to HaishinKit's ScreenActor, so it can't be built in a synchronous
+  // property initializer; overlayLayers() creates it with an await on first use.
+  private var layers: OverlayLayers?
   private var connection: RTMPConnection?
   private var stream: RTMPStream?
   private var statusTask: Task<Void, Never>?
@@ -209,6 +211,14 @@ actor StreamController {
 
   private func emit(_ event: [String: Any]) {
     onEvent?(event)
+  }
+
+  private func overlayLayers() async -> OverlayLayers {
+    if let layers { return layers }
+    let created = await OverlayLayers()
+    if let layers { return layers }
+    layers = created
+    return created
   }
 
   // MARK: Preview
@@ -244,7 +254,7 @@ actor StreamController {
     // Offscreen mode renders the camera plus overlay objects into every frame before encoding.
     await mixer.setVideoMixerSettings(VideoMixerSettings(mode: .offscreen))
     await mixer.setVideoOrientation(await Self.currentVideoOrientation())
-    await layers.configure(mixer: mixer, size: size)
+    await overlayLayers().configure(mixer: mixer, size: size)
 
     try await mixer.attachAudio(AVCaptureDevice.default(for: .audio))
     try await mixer.attachVideo(Self.camera(front: front))
@@ -338,22 +348,22 @@ actor StreamController {
   // MARK: Overlays
 
   func setOverlay(id: String, png: Data, widthPct: Double, anchor: String, x: Double, y: Double) async throws {
-    try await layers.set(mixer: mixer, id: id, png: png, widthPct: widthPct, anchor: anchor, x: x, y: y)
+    try await overlayLayers().set(mixer: mixer, id: id, png: png, widthPct: widthPct, anchor: anchor, x: x, y: y)
   }
 
   func removeOverlay(id: String) async {
-    await layers.remove(mixer: mixer, id: id)
+    await overlayLayers().remove(mixer: mixer, id: id)
   }
 
   func clearOverlays() async {
-    await layers.clear(mixer: mixer)
+    await overlayLayers().clear(mixer: mixer)
   }
 
   // MARK: Teardown
 
   func release() async {
     await stopStream()
-    await layers.clear(mixer: mixer)
+    await overlayLayers().clear(mixer: mixer)
     for view in previews.values { await mixer.removeOutput(view) }
     previews.removeAll()
     try? await mixer.attachVideo(nil)
